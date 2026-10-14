@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Customer Reviews & Proofs</title>
+  
+  <link id="pageFavicon" rel="icon" type="image/jpeg" href="https://res.cloudinary.com/dwgvvzbvn/image/upload/v1788708839/b5fnlbs8a19t3hutx5wd.jpg">
+
+  <!-- Fonts & Tailwind -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+  <style>
+    body { 
+      background-color: #ffffff;
+      color: #0f172a;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased selection:bg-[#008a44] selection:text-white">
+
+  <!-- Header -->
+  <header class="bg-white/95 backdrop-blur-md border-b border-zinc-200 sticky top-0 z-40 transition-all">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+      <button onclick="handleBack()" class="w-9 h-9 rounded-xl border border-zinc-200 bg-white flex items-center justify-center text-zinc-700 hover:text-black hover:border-zinc-400 transition active:scale-95 shadow-xs">
+        <i data-lucide="arrow-left" class="w-4 h-4"></i>
+      </button>
+      
+      <!-- Brand Logo & Name Center -->
+      <a id="headerHomeLink" href="index.html" class="flex items-center gap-2 min-w-0">
+        <img id="headerLogo" src="https://res.cloudinary.com/dwgvvzbvn/image/upload/v1788708839/b5fnlbs8a19t3hutx5wd.jpg" alt="Logo" class="w-7 h-7 rounded-lg object-cover border border-zinc-200">
+        <span id="headerStoreName" class="font-black text-sm tracking-normal text-zinc-900 uppercase truncate">Style&nbsp;Forever</span>
+      </a>
+
+      <a id="headerCartLink" href="cart.html" class="w-9 h-9 rounded-xl border border-zinc-200 bg-white flex items-center justify-center text-zinc-700 hover:text-black transition active:scale-95 shadow-xs">
+        <i data-lucide="shopping-bag" class="w-4 h-4"></i>
+      </a>
+    </div>
+  </header>
+
+  <main class="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 py-5 space-y-6">
+
+    <!-- Shimmer Loader -->
+    <div id="reviewLoader" class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-3.5 sm:gap-4">
+      <div class="aspect-[3/4] bg-zinc-100 rounded-3xl animate-pulse"></div>
+      <div class="aspect-[3/4] bg-zinc-100 rounded-3xl animate-pulse"></div>
+    </div>
+
+    <!-- PROOF / IMAGE SCREENSHOTS -->
+    <section id="secProofReviews" class="space-y-4">
+      <div id="proofReviewsGrid" class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-3.5 sm:gap-4"></div>
+    </section>
+
+  </main>
+
+  <!-- ==================== POPUP LIGHTBOX PREVIEW ==================== -->
+  <div id="lightboxModal" class="fixed inset-0 z-50 bg-black/90 backdrop-blur-md hidden items-center justify-center p-3 sm:p-5" onclick="closeLightbox()">
+    <button onclick="closeLightbox()" class="absolute top-4 right-4 z-20 w-9 h-9 rounded-full bg-white/20 text-white flex items-center justify-center hover:bg-white/30 transition">
+      <i data-lucide="x" class="w-5 h-5"></i>
+    </button>
+
+    <div class="max-w-md w-full max-h-[90vh] flex flex-col items-center justify-center" onclick="event.stopPropagation()">
+      <div class="w-full rounded-2xl overflow-hidden bg-black flex items-center justify-center relative shadow-2xl">
+        <img id="lightboxImg" src="" class="w-full h-auto max-h-[82vh] object-contain rounded-2xl">
+      </div>
+      <p id="lightboxCaption" class="text-white text-xs font-semibold mt-2.5 text-center px-4"></p>
+    </div>
+  </div>
+
+  <script>
+    let LOGO_PLACEHOLDER = "https://res.cloudinary.com/dwgvvzbvn/image/upload/v1788708839/b5fnlbs8a19t3hutx5wd.jpg";
+
+    function getSubdomainShop() {
+      const host = window.location.hostname;
+      const parts = host.split('.');
+      if (parts.length > 2 && parts[0] !== 'www') return parts[0].toLowerCase();
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get('shop') || 'styleforever';
+    }
+
+    const currentShop = getSubdomainShop();
+    const isSubdomain = window.location.hostname.split('.').length > 2 && window.location.hostname.split('.')[0] !== 'www';
+    const homeShopUrl = isSubdomain ? '/' : `index.html?shop=${encodeURIComponent(currentShop)}`;
+    const cartUrl = isSubdomain ? 'cart.html' : `cart.html?shop=${encodeURIComponent(currentShop)}`;
+    
+    document.getElementById('headerHomeLink').href = homeShopUrl;
+    document.getElementById('headerCartLink').href = cartUrl;
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyD_HBGuQSh_GzqrHqHbgdaoBikLZsK3Qqs",
+      authDomain: "new-all-f99f7.firebaseapp.com",
+      databaseURL: "https://new-all-f99f7-default-rtdb.firebaseio.com",
+      projectId: "new-all-f99f7",
+      storageBucket: "new-all-f99f7.firebasestorage.app",
+      messagingSenderId: "1069748173900",
+      appId: "1:1069748173900:web:158d6336c0f4628133c8e9"
+    };
+
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    let allVisualReviews = [];
+
+    // লোড শপ সেটিংস
+    db.ref(`stores/${currentShop}/settings`).on('value', snap => {
+      const s = snap.val();
+      if (!s) return;
+      if (s.storeName) {
+        let cleanName = s.storeName.trim();
+        if (cleanName.toLowerCase() === 'styleforever') {
+          cleanName = 'Style Forever';
+        } else {
+          cleanName = cleanName.replace(/([a-z])([A-Z])/g, '$1 $2').trim();
+        }
+        document.getElementById('headerStoreName').innerText = cleanName;
+        document.title = `Customer Reviews | ${cleanName}`;
+      }
+      if (s.logo) {
+        LOGO_PLACEHOLDER = s.logo;
+        document.getElementById('headerLogo').src = s.logo;
+        document.getElementById('pageFavicon').href = s.logo;
+      }
+    });
+
+    // ডাটাবেজ থেকে রিয়েলটাইম রিভিউ লোড
+    db.ref(`stores/${currentShop}/visualReviews`).on('value', snap => {
+      const data = snap.val() || {};
+      allVisualReviews = Object.entries(data).map(([id, val]) => ({ id, ...val }));
+
+      document.getElementById('reviewLoader')?.classList.add('hidden');
+      renderReviewsUI();
+    });
+
+    function renderReviewsUI() {
+      const proofGrid = document.getElementById('proofReviewsGrid');
+      if (!proofGrid) return;
+
+      proofGrid.innerHTML = '';
+      const proofList = allVisualReviews.filter(r => r.type !== 'video');
+
+      if (proofList.length === 0) {
+        proofGrid.innerHTML = `<div class="col-span-full py-16 text-center text-xs text-zinc-400">কোনো প্রুফ ছবি এখনো নেই</div>`;
+      } else {
+        proofList.forEach(p => {
+          const screenImg = p.mediaUrl || p.thumbnail || LOGO_PLACEHOLDER;
+          const custName = p.customerName || 'Happy Customer';
+          const prodTitle = p.productName || p.description || 'Exclusive Apparel';
+          const prodImg = p.productImage || LOGO_PLACEHOLDER;
+          const starsCount = Number(p.rating) || 5;
+
+          const card = document.createElement('div');
+          card.className = "bg-white rounded-3xl border border-zinc-200 overflow-hidden shadow-xs hover:shadow-md transition flex flex-col justify-between";
+
+          card.innerHTML = `
+            <!-- Top Screenshot Image -->
+            <div class="aspect-[3/4] bg-zinc-50 overflow-hidden cursor-zoom-in group" onclick="openLightbox('image', '${screenImg}', '${custName}')">
+              <img src="${screenImg}" alt="${custName}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
+            </div>
+
+            <!-- Customer Details & Rating -->
+            <div class="p-3.5 space-y-2">
+              <div>
+                <div class="flex items-center gap-1.5">
+                  <h4 class="font-extrabold text-xs sm:text-sm text-zinc-900 truncate">${custName}</h4>
+                  <span class="w-3.5 h-3.5 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0">
+                    <i data-lucide="check" class="w-2.5 h-2.5 stroke-[3]"></i>
+                  </span>
+                </div>
+
+                <!-- Stars -->
+                <div class="flex items-center text-amber-400 text-xs mt-1">
+                  ${'★'.repeat(starsCount)}
+                </div>
+              </div>
+
+              <!-- Attached Product Bottom Ribbon -->
+              <div class="pt-2 border-t border-zinc-100 flex items-center gap-2 min-w-0">
+                <img src="${prodImg}" class="w-7 h-7 rounded-lg object-cover border border-zinc-200 shrink-0 bg-zinc-50">
+                <span class="text-[11px] font-bold text-zinc-700 truncate">${prodTitle}</span>
+              </div>
+            </div>
+          `;
+          proofGrid.appendChild(card);
+        });
+      }
+
+      lucide.createIcons();
+    }
+
+    function openLightbox(type, url, caption) {
+      const modal = document.getElementById('lightboxModal');
+      const img = document.getElementById('lightboxImg');
+      const cap = document.getElementById('lightboxCaption');
+
+      img.src = url;
+      cap.innerText = caption || '';
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeLightbox() {
+      const modal = document.getElementById('lightboxModal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function handleBack() {
+      if (window.history.length > 1) window.history.back();
+      else window.location.href = homeShopUrl;
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+    });
+  </script>
+</body>
+</html>

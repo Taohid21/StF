@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title id="pageTitle">Track Order</title>
+  
+  <link rel="icon" type="image/jpeg" href="https://res.cloudinary.com/dwgvvzbvn/image/upload/v1788708839/b5fnlbs8a19t3hutx5wd.jpg">
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+Bengali:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Inter"', '"Noto Sans Bengali"', 'sans-serif'],
+            bengali: ['"Noto Sans Bengali"', '"Inter"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace']
+          },
+          colors: {
+            themeBg: '#091310',
+            cardBg: '#0F1E1A',
+            cardBorder: '#1A332C',
+            brandGreen: '#10B981',
+            brandGreenHover: '#059669',
+            accentMint: '#34D399'
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      text-rendering: optimizeLegibility;
+    }
+    body {
+      background-color: #091310;
+      color: #E2ECE8;
+      font-family: 'Inter', 'Noto Sans Bengali', sans-serif;
+    }
+    .custom-scroll::-webkit-scrollbar { width: 4px; }
+    .custom-scroll::-webkit-scrollbar-thumb { background: #1A332C; border-radius: 999px; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between selection:bg-brandGreen selection:text-white pb-10">
+
+  <div class="max-w-xl mx-auto w-full px-4 sm:px-6 pt-5 sm:pt-7">
+    
+    <a id="backToShopBtn" href="index.html" class="inline-flex items-center gap-2 text-emerald-300/60 hover:text-white transition text-xs font-semibold mb-6">
+      <i data-lucide="arrow-left" class="w-4 h-4"></i>
+      <span>Back to shop</span>
+    </a>
+
+    <!-- Search Input Bar -->
+    <div id="searchBarSection" class="bg-cardBg border border-cardBorder rounded-2xl p-2.5 mb-6 shadow-2xl">
+      <form onsubmit="handleTrackSearch(event)" class="flex items-center gap-2">
+        <div class="relative flex-1">
+          <i data-lucide="search" class="w-4 h-4 text-emerald-400/50 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+          <input 
+            type="text" 
+            id="trackQueryInput" 
+            placeholder="Search phone or order ID..." 
+            class="w-full bg-[#0A1713] border border-transparent focus:border-cardBorder text-zinc-100 rounded-xl py-2.5 pl-10 pr-3 text-xs outline-none font-medium transition placeholder:text-emerald-300/30"
+            autocomplete="off"
+            required
+          >
+        </div>
+        <button 
+          type="submit" 
+          class="bg-brandGreen hover:bg-brandGreenHover active:scale-95 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition shrink-0 shadow-md shadow-brandGreen/20"
+        >
+          Track
+        </button>
+      </form>
+    </div>
+
+    <!-- Live Loading -->
+    <div id="trackLoading" class="hidden text-center py-16">
+      <div class="w-7 h-7 border-2 border-emerald-950 border-t-brandGreen rounded-full animate-spin mx-auto mb-3"></div>
+      <p class="text-xs text-emerald-400/60 font-mono">Fetching real-time courier updates...</p>
+    </div>
+
+    <!-- Not Found -->
+    <div id="trackNotFound" class="hidden bg-cardBg border border-cardBorder rounded-2xl p-8 text-center space-y-2 mt-4">
+      <i data-lucide="alert-circle" class="w-6 h-6 text-emerald-500/60 mx-auto"></i>
+      <h3 class="text-sm font-bold text-zinc-200">No order found</h3>
+      <p class="text-xs text-emerald-300/50">Please check the phone number or order ID and try again.</p>
+    </div>
+
+    <!-- Active Tracking Content -->
+    <div id="trackOrderContainer" class="space-y-4"></div>
+
+  </div>
+
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const currentShop = urlParams.get('shop') || 'styleforever';
+
+    const backBtn = document.getElementById('backToShopBtn');
+    if (backBtn) backBtn.href = `index.html?shop=${encodeURIComponent(currentShop)}`;
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyD_HBGuQSh_GzqrHqHbgdaoBikLZsK3Qqs",
+      authDomain: "new-all-f99f7.firebaseapp.com",
+      databaseURL: "https://new-all-f99f7-default-rtdb.firebaseio.com",
+      projectId: "new-all-f99f7",
+      storageBucket: "new-all-f99f7.firebasestorage.app",
+      messagingSenderId: "1069748173900",
+      appId: "1:1069748173900:web:158d6336c0f4628133c8e9"
+    };
+
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const q = urlParams.get('q') || urlParams.get('phone') || urlParams.get('id');
+      if (q) {
+        document.getElementById('trackQueryInput').value = q;
+        handleTrackSearch();
+      }
+      if (window.lucide) lucide.createIcons();
+    });
+
+    async function handleTrackSearch(e) {
+      if (e) e.preventDefault();
+      const input = document.getElementById('trackQueryInput');
+      const query = (input?.value || '').trim().toLowerCase().replace(/[^0-9a-zA-Z]/g, '');
+      if (!query) return;
+
+      const loader = document.getElementById('trackLoading');
+      const notFound = document.getElementById('trackNotFound');
+      const container = document.getElementById('trackOrderContainer');
+
+      loader.classList.remove('hidden');
+      notFound.classList.add('hidden');
+      container.innerHTML = '';
+
+      try {
+        const snap = await db.ref(`stores/${currentShop}/orders`).once('value');
+        const orders = snap.val();
+        loader.classList.add('hidden');
+
+        if (!orders) {
+          notFound.classList.remove('hidden');
+          return;
+        }
+
+        let matched = [];
+        Object.entries(orders).forEach(([key, o]) => {
+          const cleanPhone = (o.phone || '').replace(/[^0-9]/g, '');
+          const cleanKey = key.toLowerCase();
+          if (cleanPhone.includes(query) || cleanKey.includes(query) || query.includes(cleanPhone)) {
+            matched.push({ id: key, ...o });
+          }
+        });
+
+        if (matched.length === 0) {
+          notFound.classList.remove('hidden');
+          return;
+        }
+
+        matched.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        renderTrackOrderUI(matched[0]);
+
+      } catch (err) {
+        console.error(err);
+        loader.classList.add('hidden');
+        notFound.classList.remove('hidden');
+      }
+    }
+
+    function renderTrackOrderUI(o) {
+      const container = document.getElementById('trackOrderContainer');
+      container.innerHTML = '';
+
+      const status = (o.status || 'Pending').toLowerCase();
+      
+      const dateObj = o.createdAt ? new Date(o.createdAt) : new Date();
+      const formattedDate = dateObj.toLocaleDateString('en-US', {
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric'
+      });
+
+      // Status Step logic
+      let currentStep = 0;
+      let badgeLabel = 'Pending';
+      let bannerMessage = 'We received your order and are verifying your payment.';
+
+      if (status === 'confirmed') {
+        currentStep = 2;
+        badgeLabel = 'Confirmed';
+        bannerMessage = 'Your order has been verified and confirmed.';
+      } else if (status === 'dispatched' || status === 'shipped') {
+        currentStep = 3;
+        badgeLabel = 'Shipped';
+        bannerMessage = 'Your package has been handed over to the courier and is on its way!';
+      } else if (status === 'delivered' || status === 'completed') {
+        currentStep = 4;
+        badgeLabel = 'Delivered';
+        bannerMessage = 'Your order has been successfully delivered!';
+      } else if (status === 'cancelled') {
+        badgeLabel = 'Cancelled';
+        bannerMessage = 'This order has been cancelled.';
+      }
+
+      const totalAmount = Number(o.totalAmount || 0);
+      const advancePaid = Number(o.advancePaid || 0);
+      const dueOnDelivery = o.codAmount !== undefined ? Number(o.codAmount) : Math.max(0, totalAmount - advancePaid);
+
+      // Courier Real Data Extraction
+      const sfTracking = o.steadfastTracking || null;
+      const ptTracking = o.pathaoConsignmentId || null;
+      let courierName = 'Standard Delivery';
+      let liveTrackingBtn = '';
+
+      if (sfTracking) {
+        courierName = 'Steadfast Courier';
+        liveTrackingBtn = `
+          <a href="https://steadfast.com.bd/t/${sfTracking}" target="_blank" rel="noopener noreferrer" class="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-950 border border-emerald-700/80 hover:bg-emerald-900 text-emerald-300 text-[11px] font-bold transition">
+            <i data-lucide="truck" class="w-3.5 h-3.5"></i>
+            <span>Track on Steadfast (ID: ${sfTracking})</span>
+            <i data-lucide="external-link" class="w-3 h-3"></i>
+          </a>
+        `;
+      } else if (ptTracking) {
+        courierName = 'Pathao Courier';
+        liveTrackingBtn = `
+          <div class="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-950 border border-emerald-700/80 text-emerald-300 text-[11px] font-mono font-bold">
+            <i data-lucide="bike" class="w-3.5 h-3.5"></i>
+            <span>Pathao ID: ${ptTracking}</span>
+          </div>
+        `;
+      }
+
+      const timelineSteps = [
+        { title: 'Order Placed', desc: o.paymentMethod === 'Cash on Delivery' ? 'Order confirmed via COD' : 'Payment verification completed' },
+        { title: 'Processing', desc: 'Preparing your items' },
+        { title: 'Confirmed', desc: 'Order verified & confirmed' },
+        { title: 'Shipped', desc: sfTracking ? `In transit via Steadfast (#${sfTracking})` : 'On its way to you' },
+        { title: 'Delivered', desc: 'Enjoy your order' }
+      ];
+
+      const itemsList = o.items || [];
+      const itemsHtml = itemsList.map(it => {
+        return `
+          <div class="flex items-start justify-between gap-4 py-3">
+            <div>
+              <h4 class="text-xs sm:text-[13px] font-bold text-zinc-100">${it.name || 'Product'}</h4>
+              <p class="text-[11px] text-emerald-300/50 font-medium mt-0.5">
+                ${it.selectedSize ? `${it.selectedSize} · ` : ''}qty ${it.quantity || 1}
+              </p>
+            </div>
+            <span class="text-xs sm:text-[13px] font-bold text-zinc-200 font-mono whitespace-nowrap">৳ ${Number(it.price || 0).toFixed(2)}</span>
+          </div>
+        `;
+      }).join('');
+
+      const card = document.createElement('div');
+      card.className = "space-y-4";
+      card.innerHTML = `
+        <!-- Top Title & Badge -->
+        <div class="flex items-start justify-between pt-1">
+          <div>
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">Track Order</h1>
+            <p class="text-[11px] font-mono text-emerald-400/70 mt-1 uppercase tracking-wider font-semibold">#${o.id ? o.id.slice(-14).toUpperCase() : 'HEEMS-ORDER'}</p>
+            <p class="text-[11px] text-emerald-300/50 mt-0.5">Placed ${formattedDate}</p>
+          </div>
+          <span class="px-3.5 py-1 rounded-full text-[11px] font-bold tracking-wide ${
+            status === 'delivered' ? 'bg-emerald-950/90 text-emerald-300 border border-emerald-700' :
+            (status === 'cancelled' ? 'bg-rose-950/90 text-rose-300 border border-rose-800' : 'bg-[#183129] text-[#FBBF24] border border-[#264D40]')
+          }">
+            ${badgeLabel}
+          </span>
+        </div>
+
+        <!-- Banner Card -->
+        <div class="bg-cardBg border border-cardBorder rounded-2xl p-4 sm:p-5 shadow-lg">
+          <p class="text-xs sm:text-sm font-semibold text-emerald-100/90 leading-relaxed">${bannerMessage}</p>
+          ${liveTrackingBtn}
+        </div>
+
+        <!-- Vertical Timeline Card -->
+        <div class="bg-cardBg border border-cardBorder rounded-2xl p-5 sm:p-6 shadow-lg">
+          <div class="space-y-6 relative">
+            ${timelineSteps.map((step, idx) => {
+              const isPastOrActive = idx <= currentStep && status !== 'cancelled';
+              const isLast = idx === timelineSteps.length - 1;
+
+              return `
+                <div class="relative flex items-start gap-4">
+                  ${!isLast ? `
+                    <div class="absolute left-[7px] top-[14px] w-[2px] h-[calc(100%+14px)] ${
+                      idx < currentStep && status !== 'cancelled' ? 'bg-brandGreen' : 'bg-[#1A332C]'
+                    }"></div>
+                  ` : ''}
+
+                  <div class="relative z-10 w-4 h-4 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${
+                    isPastOrActive ? 'bg-brandGreen ring-4 ring-brandGreen/25' : 'bg-[#162B25]'
+                  }"></div>
+
+                  <div>
+                    <h5 class="text-xs font-bold ${isPastOrActive ? 'text-zinc-100' : 'text-emerald-300/40'}">${step.title}</h5>
+                    <p class="text-[11px] ${isPastOrActive ? 'text-emerald-300/70' : 'text-emerald-300/30'} mt-0.5 font-medium">${step.desc}</p>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+
+        <!-- Customer & Courier Info -->
+        <div class="grid grid-cols-2 gap-3 sm:gap-4">
+          <div class="bg-cardBg border border-cardBorder rounded-2xl p-4 sm:p-5 shadow-lg">
+            <span class="text-[11px] font-bold text-emerald-400/60 block mb-1">Customer</span>
+            <span class="text-xs sm:text-sm font-bold text-zinc-200 block truncate">${o.customerName || 'Customer'}</span>
+          </div>
+          <div class="bg-cardBg border border-cardBorder rounded-2xl p-4 sm:p-5 shadow-lg">
+            <span class="text-[11px] font-bold text-emerald-400/60 block mb-1">Shipping</span>
+            <span class="text-xs sm:text-sm font-bold text-zinc-200 block truncate">${courierName}</span>
+          </div>
+        </div>
+
+        <!-- Order Items & Billing Calculation -->
+        <div class="bg-cardBg border border-cardBorder rounded-2xl p-5 sm:p-6 space-y-4 shadow-lg">
+          <div>
+            <span class="text-[11px] font-bold text-emerald-400/60 block mb-1">Items</span>
+            <div class="divide-y divide-cardBorder">${itemsHtml}</div>
+          </div>
+
+          <!-- Total Calculation -->
+          <div class="pt-2 border-t border-cardBorder space-y-2 text-xs">
+            <div class="flex justify-between items-center text-emerald-200/60 font-medium">
+              <span>Order Total:</span>
+              <span class="font-bold font-mono text-zinc-100">৳ ${totalAmount.toFixed(2)}</span>
+            </div>
+
+            ${advancePaid > 0 ? `
+              <div class="flex justify-between items-center text-emerald-200/60 font-medium">
+                <span>Paid Online (Advance):</span>
+                <span class="font-bold font-mono text-accentMint">৳ ${advancePaid.toFixed(2)}</span>
+              </div>
+            ` : ''}
+
+            <div class="flex justify-between items-center text-emerald-200/60 font-medium pt-1">
+              <span>Due on Delivery:</span>
+              <span class="font-bold font-mono text-[#FBBF24]">৳ ${dueOnDelivery.toFixed(2)}</span>
+            </div>
+          </div>
+
+          <!-- Crisp Bangla Alert Box -->
+          <div class="bg-[#14261F] border border-[#224438] rounded-xl p-3.5 sm:p-4 text-xs sm:text-sm font-bengali font-semibold text-[#FBBF24] leading-relaxed">
+            ডেলিভারির সময় ৳ ${dueOnDelivery.toFixed(2)} ক্যাশ অন ডেলিভারির মাধ্যমে পরিশোধ করতে হবে।
+          </div>
+        </div>
+
+        <!-- Continue Shopping Button -->
+        <div class="pt-2">
+          <a 
+            href="index.html?shop=${encodeURIComponent(currentShop)}" 
+            class="w-full bg-brandGreen hover:bg-brandGreenHover active:scale-[0.99] text-white font-bold py-3.5 rounded-full transition text-xs sm:text-sm flex items-center justify-center shadow-lg shadow-brandGreen/25"
+          >
+            Continue Shopping
+          </a>
+        </div>
+      `;
+
+      container.appendChild(card);
+      if (window.lucide) lucide.createIcons();
+    }
+  </script>
+</body>
+</html>
