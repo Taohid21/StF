@@ -7,7 +7,8 @@
   
   <link id="pageFavicon" rel="icon" type="image/jpeg" href="https://res.cloudinary.com/dwgvvzbvn/image/upload/v1788708839/b5fnlbs8a19t3hutx5wd.jpg">
 
-  <!-- Fonts & Tailwind -->
+  <!-- Fonts & Firebase Preconnect -->
+  <link rel="preconnect" href="https://style-forever-500b5-default-rtdb.asia-southeast1.firebasedatabase.app" crossorigin>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -100,13 +101,14 @@
     document.getElementById('headerCartLink').href = cartUrl;
 
     const firebaseConfig = {
-      apiKey: "AIzaSyD_HBGuQSh_GzqrHqHbgdaoBikLZsK3Qqs",
-      authDomain: "new-all-f99f7.firebaseapp.com",
-      databaseURL: "https://new-all-f99f7-default-rtdb.firebaseio.com",
-      projectId: "new-all-f99f7",
-      storageBucket: "new-all-f99f7.firebasestorage.app",
-      messagingSenderId: "1069748173900",
-      appId: "1:1069748173900:web:158d6336c0f4628133c8e9"
+      apiKey: "AIzaSyCX1saVzamVWerXzyKPI1_wsnzSXKU6cs4",
+      authDomain: "style-forever-500b5.firebaseapp.com",
+      databaseURL: "https://style-forever-500b5-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "style-forever-500b5",
+      storageBucket: "style-forever-500b5.firebasestorage.app",
+      messagingSenderId: "424704081651",
+      appId: "1:424704081651:web:5998dbf7c5e8c03b59c186",
+      measurementId: "G-SHJLKXHW9R"
     };
 
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
