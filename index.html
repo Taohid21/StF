@@ -247,7 +247,8 @@
 
   <!-- Top Header (Same Deep Dark Green Brand Aura) -->
   <header class="bg-white/95 backdrop-blur-md border-b-2 border-[#005C4F]/25 sticky top-0 z-40 transition-all shadow-[0_2px_12px_rgba(0,92,79,0.06)]">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
+    <!-- হেডারের উচ্চতা বাড়িয়ে h-16 sm:h-20 করা হয়েছে -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between">
       
       <div class="flex items-center gap-4">
         <button onclick="toggleMenu()" aria-label="Open Navigation" class="p-1.5 -ml-1 text-[#005C4F] hover:text-[#004238] transition active:scale-90">
@@ -262,13 +263,14 @@
         </nav>
       </div>
 
+      <!-- লোগোর সাইজ বাড়িয়ে h-12 sm:h-16 এবং max-w-[200px] sm:max-w-[260px] করা হয়েছে -->
       <a href="javascript:void(0)" onclick="navigateTo('home')" class="flex items-center justify-center py-1">
         <img 
           id="headerBrandLogo"
           src="https://gcdnb.pbrd.co/images/AFXsOzqPA05A.png" 
           alt="Style Forever" 
           style="filter: brightness(0);"
-          class="h-10 sm:h-12 w-auto max-w-[150px] sm:max-w-[190px] object-contain select-none"
+          class="h-12 sm:h-16 w-auto max-w-[200px] sm:max-w-[260px] object-contain select-none"
         >
       </a>
 
